@@ -1,0 +1,14 @@
+node_modules/
+build/
+.svelte-kit/
+.wrangler/
+*.local
+.dev.vars
+.DS_Store
+bun.lock
+.env
+.env.*
+!.env.example
+!.dev.vars.example
+.alchemy/
+wrangler.jsonc

@@ -1,0 +1,19 @@
+{
+  "name": "AI/ML History — Interactive Timeline",
+  "short_name": "AI History",
+  "description": "Interactive timeline of AI/ML research, hardware evolution, and neuroinformatics",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

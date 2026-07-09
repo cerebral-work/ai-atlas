@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+  <!-- Timeline line -->
+  <line x1="80" y1="256" x2="432" y2="256" stroke="#5e72e4" stroke-width="3" opacity="0.4"/>
+  <!-- Paper dots along timeline -->
+  <circle cx="120" cy="256" r="8" fill="#c0392b"/>
+  <circle cx="180" cy="256" r="10" fill="#2980b9"/>
+  <circle cx="240" cy="256" r="6" fill="#27ae60"/>
+  <circle cx="300" cy="256" r="14" fill="#8e44ad"/>
+  <circle cx="360" cy="256" r="18" fill="#f39c12"/>
+  <circle cx="410" cy="256" r="12" fill="#e74c3c"/>
+  <!-- Brain/neuro overlay -->
+  <circle cx="200" cy="160" r="5" fill="#e17055" opacity="0.7"/>
+  <circle cx="280" cy="160" r="5" fill="#0984e3" opacity="0.7"/>
+  <circle cx="340" cy="160" r="5" fill="#e84393" opacity="0.7"/>
+  <!-- Hardware curve -->
+  <path d="M 80 360 Q 200 350 300 320 T 430 280" fill="none" stroke="#fd79a8" stroke-width="2" opacity="0.5"/>
+  <!-- Label -->
+  <text x="256" y="440" text-anchor="middle" fill="#5e72e4" font-family="monospace" font-size="28" font-weight="bold">AI/ML</text>
+</svg>
