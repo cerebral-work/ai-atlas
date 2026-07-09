@@ -1,5 +1,5 @@
 import alchemy from "alchemy";
-import { Website } from "alchemy/cloudflare";
+import { CustomDomain, Website } from "alchemy/cloudflare";
 
 /**
  * Alchemy IaC — deploys the SvelteKit PWA to Cloudflare Workers.
@@ -36,6 +36,14 @@ export const website = await Website("website", {
   url: true,
 });
 
+// aiml.cerebral.work → this worker (zone convention: design/dreams/flashed/lab)
+export const domain = await CustomDomain("domain", {
+  name: "aiml.cerebral.work",
+  zoneId: "ee34e326eb0f2ed2cb2a59937150a9a1", // cerebral.work
+  workerName: `${app.appName}-${app.stage}`,
+});
+
 console.log(`Deployed to: ${website.url}`);
+console.log(`Custom domain: https://${domain.name}`);
 
 await app.finalize();
