@@ -1,7 +1,7 @@
 {
-  "name": "AI/ML History — Interactive Timeline",
-  "short_name": "AI History",
-  "description": "Interactive timeline of AI/ML research, hardware evolution, and neuroinformatics",
+  "name": "AI Atlas — Interactive AI/ML Exhibit",
+  "short_name": "AI Atlas",
+  "description": "Interactive scrolling exhibit of AI/ML research — 700 papers, 198 explainers, 66 milestones",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

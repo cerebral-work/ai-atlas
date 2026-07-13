@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    DIGEST_BASE,
     fetchDigestIndex,
     fetchDigest,
     digestCategoryMeta,
@@ -15,6 +16,7 @@
   let error = $state<string | null>(null);
 
   const digestCache = new Map<string, Digest>();
+  let reqSeq = 0; // guards against out-of-order date fetches clobbering the active one
 
   $effect(() => {
     fetchDigestIndex()
@@ -32,6 +34,7 @@
   });
 
   async function selectDate(date: string) {
+    const seq = ++reqSeq;
     selectedDate = date;
     loading = true;
     error = null;
@@ -39,28 +42,37 @@
       let d = digestCache.get(date);
       if (!d) {
         d = await fetchDigest(date);
+        if (seq !== reqSeq) return; // a newer selection superseded this fetch
         digestCache.set(date, d);
       }
+      if (seq !== reqSeq) return;
       digest = d;
     } catch {
+      if (seq !== reqSeq) return; // don't let a stale rejection wipe a newer render
       error = `No digest object for ${date}.`;
       digest = null;
     } finally {
-      loading = false;
+      if (seq === reqSeq) loading = false;
     }
   }
 
   const categoryOrder: DigestCategory[] = ["models", "research", "hardware", "tools", "industry", "policy"];
+  const otherMeta = { label: "Other", color: "#888" };
 
   let grouped = $derived.by(() => {
     if (!digest) return [];
-    return categoryOrder
+    const known = categoryOrder
       .map((cat) => ({
-        cat,
+        cat: cat as string,
         meta: digestCategoryMeta[cat],
         items: digest!.items.filter((i) => i.category === cat),
       }))
       .filter((g) => g.items.length > 0);
+    // Any item whose category isn't one of the known buckets still shows, under "Other".
+    const other = digest.items.filter((i) => !(i.category in digestCategoryMeta));
+    return other.length > 0
+      ? [...known, { cat: "other", meta: otherMeta, items: other }]
+      : known;
   });
 
   function hostOf(url: string): string {
@@ -70,18 +82,33 @@
       return "";
     }
   }
+
+  // Only http/https survive — blocks javascript:/data: URLs from LLM-generated JSON.
+  function safeUrl(url: string): string {
+    try {
+      const u = new URL(url, DIGEST_BASE);
+      return u.protocol === "http:" || u.protocol === "https:" ? url : "#";
+    } catch {
+      return "#";
+    }
+  }
+
+  function updatedLabel(iso: string): string {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? "—" : d.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  }
 </script>
 
 <svelte:head>
-  <title>Daily Digest — AI/ML History</title>
+  <title>Daily Digest — AI Atlas</title>
   <meta name="description" content="Daily digest of AI/ML model releases, research, and hardware news" />
 </svelte:head>
 
 <div class="digest-app">
   <header class="app-header">
-    <h1><a href="/" class="home-link">AI/ML History</a> <span class="crumb">/ digest</span></h1>
+    <h1><a href="/" class="home-link">AI Atlas</a> <span class="crumb">/ digest</span></h1>
     {#if index}
-      <span class="updated">updated {new Date(index.updated).toISOString().slice(0, 16).replace("T", " ")} UTC</span>
+      <span class="updated">updated {updatedLabel(index.updated)}</span>
     {/if}
   </header>
 
@@ -111,7 +138,7 @@
             <ul>
               {#each group.items as item}
                 <li style="--cat-color: {group.meta.color}">
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" class="headline">
+                  <a href={safeUrl(item.url)} target="_blank" rel="noopener noreferrer" class="headline">
                     {item.headline}
                   </a>
                   <span class="source">{item.source || hostOf(item.url)}</span>

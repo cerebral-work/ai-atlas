@@ -2,7 +2,8 @@
 // The site never bundles digest content; a daily job writes JSON objects and
 // this module fetches them client-side.
 
-export const DIGEST_BASE = "https://pub-36949a13725a448595ffed8fe035dba4.r2.dev";
+// R2 bucket `aiml-digests` fronted by a custom domain (full CDN, no r2.dev throttle).
+export const DIGEST_BASE = "https://digests.cerebral.work";
 
 export type DigestCategory =
   | "models"
@@ -47,7 +48,9 @@ export async function fetchDigestIndex(): Promise<DigestIndex> {
 }
 
 export async function fetchDigest(date: string): Promise<Digest> {
-  const res = await fetch(`${DIGEST_BASE}/${date}.json`);
+  // no-cache: the daily job overwrites <date>.json in place (corrections/revisions),
+  // so a stale HTTP-cached copy must never win.
+  const res = await fetch(`${DIGEST_BASE}/${date}.json`, { cache: "no-cache" });
   if (!res.ok) throw new Error(`digest ${date}: HTTP ${res.status}`);
   return res.json();
 }

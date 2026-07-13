@@ -10,8 +10,8 @@
 </script>
 
 <svelte:head>
-  <title>AI/ML History — Interactive Timeline</title>
-  <meta name="description" content="Interactive timeline of AI/ML research, hardware evolution, and neuroinformatics" />
+  <title>AI Atlas — Interactive AI/ML Exhibit</title>
+  <meta name="description" content="Interactive scrolling exhibit of AI/ML research — 700 papers, 198 concept explainers, 66 milestones" />
 </svelte:head>
 
 {@render children()}

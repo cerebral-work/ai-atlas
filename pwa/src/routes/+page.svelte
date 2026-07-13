@@ -1,37 +1,42 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { papers, categoryMeta, yearRange } from "$lib/data/papers";
+  import { allPapers, categoryMeta, yearRange } from "$lib/data/papers";
+  import { explainers } from "$lib/data/explainers";
   import type { Paper, PaperCategory } from "$lib/types";
-  import OrreryTimeline from "$lib/components/OrreryTimeline.svelte";
-  import HudPanel from "$lib/components/HudPanel.svelte";
+  import ScrollExhibit from "$lib/components/ScrollExhibit.svelte";
+  import DetailDrawer from "$lib/components/DetailDrawer.svelte";
+  import GlossaryOverlay from "$lib/components/GlossaryOverlay.svelte";
+  import OverlayTrack from "$lib/components/OverlayTrack.svelte";
   import AboutPanel from "$lib/components/AboutPanel.svelte";
 
   // --- State ---
   let hoveredPaper = $state<Paper | null>(null);
   let selectedPaper = $state<Paper | null>(null);
-  let showHardware = $state(true);
-  let showNeuro = $state(true);
-  let showCompute = $state(true);
-  let showMoore = $state(true);
-  let showRelations = $state(true);
-  let showEras = $state(true);
-  let showDensity = $state(true);
-  let showAbout = $state(false);
-  let hasSeenIntro = $state(
-    typeof localStorage !== "undefined" && !localStorage.getItem("aiml-seen"),
-  );
   let activeCategories = $state<Set<PaperCategory>>(
     new Set(Object.keys(categoryMeta) as PaperCategory[]),
   );
   let searchQuery = $state("");
+  let showGlossary = $state(false);
+  let showAbout = $state(false);
+  let showEras = $state(true);
+  let showMilestones = $state(true);
+  let showHardware = $state(false);
+  let showNeuro = $state(false);
+  let showCompute = $state(false);
+  let hasSeenIntro = $state(
+    typeof localStorage !== "undefined" && !localStorage.getItem("atlas-seen"),
+  );
+
+  // --- Refs ---
+  let scrollExhibit: ScrollExhibit | null = $state(null);
+  let glossaryOverlay: GlossaryOverlay | null = $state(null);
 
   // --- Derived ---
   const minYear = yearRange[0];
   const maxYear = yearRange[1];
-  const yearSpan = maxYear - minYear;
 
   const filteredPapers = $derived(
-    papers.filter((p) => {
+    allPapers.filter((p) => {
       if (!activeCategories.has(p.category)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -44,8 +49,6 @@
       return true;
     }),
   );
-
-
 
   function toggleCategory(cat: PaperCategory) {
     const next = new Set(activeCategories);
@@ -62,95 +65,79 @@
     activeCategories = new Set();
   }
 
-  // Decade markers
-  const decades = $derived.by(() => {
-    const result: number[] = [];
-    for (let y = Math.ceil(minYear / 10) * 10; y <= maxYear; y += 10) {
-      result.push(y);
+  // --- Paper selection ---
+  function selectPaper(paper: Paper | null) {
+    const toggle = () => {
+      selectedPaper = selectedPaper?.id === paper?.id ? null : paper;
+      if (paper) scrollExhibit?.scrollToPaper(paper);
+    };
+    if (paper && document.startViewTransition) {
+      document.startViewTransition(toggle);
+    } else {
+      toggle();
     }
-    return result;
-  });
-  // Related papers for selected paper
-  const relatedPapers = $derived(
-    selectedPaper?.related
-      ? selectedPaper.related
-          .map((id) => papers.find((p) => p.id === id))
-          .filter((p): p is Paper => p !== undefined)
-      : [],
-  );
-  // Genealogy/ancestry chain — recursively walk related papers up to maxDepth
-  function getAncestry(paper: Paper, maxDepth: number = 2): Paper[] {
-    const visited = new Set<string>();
-    const result: Paper[] = [];
-
-    function walk(p: Paper, depth: number) {
-      if (depth > maxDepth || visited.has(p.id)) return;
-      visited.add(p.id);
-      if (p.related) {
-        for (const relId of p.related) {
-          const rel = papers.find((pp) => pp.id === relId);
-          if (rel && !visited.has(rel.id)) {
-            result.push(rel);
-            walk(rel, depth + 1);
-          }
-        }
-      }
-    }
-    walk(paper, 0);
-    return result.sort((a, b) => a.year - b.year);
   }
 
-  const ancestry = $derived(selectedPaper ? getAncestry(selectedPaper) : []);
+  function closeDetail() {
+    const close = () => { selectedPaper = null; };
+    if (document.startViewTransition) {
+      document.startViewTransition(close);
+    } else {
+      close();
+    }
+  }
 
-  // Paper selection with View Transitions API (progressive enhancement)
- function selectPaper(paper: Paper | null) {
-   const toggle = () => {
-     selectedPaper = selectedPaper?.id === paper?.id ? null : paper;
-   };
-   if (paper && document.startViewTransition) {
-     document.startViewTransition(toggle);
-   } else {
-     toggle();
-   }
- }
- function closeDetail() {
-   const close = () => { selectedPaper = null; };
-   if (document.startViewTransition) {
-     document.startViewTransition(close);
-   } else {
-     close();
-   }
- }
+  // --- Glossary / explainer handling ---
+  function showExplainerForConcept(conceptLabel: string) {
+    // Find matching explainer by id, term, or aka
+    const match = explainers.find(e =>
+      e.id === conceptLabel ||
+      e.term.toLowerCase() === conceptLabel.toLowerCase() ||
+      e.aka?.some(a => a.toLowerCase() === conceptLabel.toLowerCase())
+    );
+    if (match) {
+      showGlossary = true;
+      // The GlossaryOverlay will be rendered; we could auto-select but the user can search
+    }
+  }
 
-  // Keyboard navigation — sorted list + index
+  function handlePaperSelectFromGlossary(paperId: string) {
+    const p = allPapers.find(pp => pp.id === paperId);
+    if (p) selectPaper(p);
+  }
+
+  // --- Keyboard navigation ---
   const filteredPaperList = $derived(
     [...filteredPapers].sort((a, b) => a.year - b.year),
   );
   const selectedPaperIndex = $derived(
-    selectedPaper ? filteredPaperList.findIndex((p) => p.id === selectedPaper.id) : -1,
+    selectedPaper ? filteredPaperList.findIndex((p) => p.id === selectedPaper!.id) : -1,
   );
 
   function handleKey(e: KeyboardEvent) {
-    // Don't intercept when typing in search
     if (e.target instanceof HTMLInputElement) return;
 
     if (e.key === "Escape") {
       if (selectedPaper) closeDetail();
+      else if (showGlossary) showGlossary = false;
       else if (showAbout) showAbout = false;
-    } else if (e.key === "ArrowRight") {
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
       if (filteredPaperList.length === 0) return;
       const next = selectedPaperIndex < filteredPaperList.length - 1
         ? selectedPaperIndex + 1
         : 0;
       selectPaper(filteredPaperList[next]);
-    } else if (e.key === "ArrowLeft") {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       if (filteredPaperList.length === 0) return;
       const prev = selectedPaperIndex > 0
         ? selectedPaperIndex - 1
         : filteredPaperList.length - 1;
       selectPaper(filteredPaperList[prev]);
+    } else if (e.key === "g" || e.key === "G") {
+      e.preventDefault();
+      showGlossary = !showGlossary;
     } else if (e.key === "/") {
       e.preventDefault();
       document.querySelector<HTMLInputElement>(".search-input")?.focus();
@@ -164,12 +151,7 @@
     }
   }
 
-  function scrollToPaper(_paper: Paper) {
-    // Orrery is circular — no scroll needed; selection highlights on the dial
-  }
-
   // --- URL state ---
-  // Parse URL on mount (once — not in $effect to avoid reactive loops)
   onMount(() => {
     const params = new URLSearchParams(window.location.search);
     const cat = params.get("cat");
@@ -180,34 +162,42 @@
     const overlay = params.get("overlay");
     if (overlay) {
       const overlays = overlay.split(",");
+      showEras = overlays.includes("era");
+      showMilestones = overlays.includes("mil");
       showHardware = overlays.includes("hw");
       showNeuro = overlays.includes("neuro");
       showCompute = overlays.includes("compute");
-      showMoore = overlays.includes("moore");
-      showRelations = overlays.includes("relations");
-      showEras = overlays.includes("eras");
-      showDensity = overlays.includes("density");
     }
     const paper = params.get("paper");
     if (paper) {
-      const p = papers.find((pp) => pp.id === paper);
+      const p = allPapers.find((pp) => pp.id === paper);
       if (p) selectedPaper = p;
+    }
+    if (params.get("glossary")) showGlossary = true;
+
+    // Container size observer for virtual scrolling
+    const container = document.querySelector(".scroll-exhibit");
+    if (container) {
+      const observer = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          // The ScrollExhibit handles its own height tracking
+        }
+      });
+      observer.observe(container);
     }
   });
 
   // Serialize to URL (debounced)
   let urlDebounce: ReturnType<typeof setTimeout> | null = null;
   $effect(() => {
-    // Track all state that affects URL
     activeCategories;
+    showEras;
+    showMilestones;
     showHardware;
     showNeuro;
     showCompute;
-    showMoore;
-    showRelations;
-    showEras;
-    showDensity;
     selectedPaper;
+    showGlossary;
 
     if (urlDebounce) clearTimeout(urlDebounce);
     urlDebounce = setTimeout(() => {
@@ -217,15 +207,14 @@
         params.set("cat", cats.join(","));
       }
       const overlays: string[] = [];
+      if (showEras) overlays.push("era");
+      if (showMilestones) overlays.push("mil");
       if (showHardware) overlays.push("hw");
       if (showNeuro) overlays.push("neuro");
       if (showCompute) overlays.push("compute");
-      if (showMoore) overlays.push("moore");
-      if (showRelations) overlays.push("relations");
-      if (showEras) overlays.push("eras");
-      if (showDensity) overlays.push("density");
-      if (overlays.length < 7) params.set("overlay", overlays.join(","));
+      if (overlays.length > 0) params.set("overlay", overlays.join(","));
       if (selectedPaper) params.set("paper", selectedPaper.id);
+      if (showGlossary) params.set("glossary", "1");
       const qs = params.toString();
       history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
     }, 300);
@@ -233,8 +222,8 @@
 </script>
 
 <svelte:head>
-  <title>AI/ML History — Interactive Timeline</title>
-  <meta name="description" content="Interactive timeline of AI/ML research, hardware evolution, and neuroinformatics" />
+  <title>AI Atlas — Interactive AI/ML Exhibit</title>
+  <meta name="description" content="An interactive scrolling exhibit of AI/ML publications, breakthroughs, and concepts from 1936 to present." />
 </svelte:head>
 
 <svelte:window onkeydown={handleKey} />
@@ -243,7 +232,7 @@
 
   <!-- Header -->
   <header class="app-header">
-    <h1>AI/ML History</h1>
+    <h1>AI Atlas</h1>
     <div class="header-controls">
       <input
         type="text"
@@ -251,14 +240,23 @@
         bind:value={searchQuery}
         class="search-input"
       />
-      <button onclick={() => (showRelations = !showRelations)} class:active={showRelations}>
-        Relations
+      <button onclick={() => (showGlossary = true)} class="header-btn">
+        Glossary
       </button>
-      <button onclick={() => (showEras = !showEras)} class:active={showEras}>
-        Eras
+      <button onclick={() => (showEras = !showEras)} class:active={showEras} class="header-btn">
+        Era
       </button>
-      <a href="/digest/" class="digest-link">Digest</a>
-      <button onclick={() => (showAbout = true)} class="about-btn" aria-label="About">?</button>
+      <button onclick={() => (showMilestones = !showMilestones)} class:active={showMilestones} class="header-btn">
+        Mil
+      </button>
+      <button onclick={() => (showHardware = !showHardware)} class:active={showHardware} class="header-btn">
+        HW
+      </button>
+      <button onclick={() => (showNeuro = !showNeuro)} class:active={showNeuro} class="header-btn">
+        NEU
+      </button>
+      <a href="/digest/" class="header-btn digest-link">Digest</a>
+      <button onclick={() => (showAbout = true)} class="header-btn about-btn" aria-label="About">?</button>
     </div>
   </header>
 
@@ -278,48 +276,76 @@
     {/each}
   </div>
 
-  <!-- Orrery Dial — circular timeline -->
-  <div class="orrery-container">
-    <OrreryTimeline
-      papers={filteredPapers}
-      {minYear}
-      {maxYear}
-      {selectedPaper}
-      {hoveredPaper}
-      onSelectPaper={selectPaper}
-      onHoverPaper={(p) => (hoveredPaper = p)}
-    />
+  <!-- Main exhibit area: overlay tracks + scroll exhibit -->
+  <div class="exhibit-area">
+    {#if showNeuro || showMilestones}
+      <OverlayTrack
+        {showHardware}
+        {showNeuro}
+        {showCompute}
+        {showMilestones}
+      />
+    {/if}
 
-    {#if filteredPapers.length === 0}
-      <div class="empty-results">No papers found</div>
+    <div class="exhibit-main">
+      <ScrollExhibit
+        bind:this={scrollExhibit}
+        {activeCategories}
+        {searchQuery}
+        {selectedPaper}
+        {hoveredPaper}
+        {showEras}
+        {showMilestones}
+        onSelect={selectPaper}
+        onHover={(p: Paper | null) => (hoveredPaper = p)}
+      />
+
+      {#if filteredPapers.length === 0 && allPapers.length > 0}
+        <div class="empty-results">No papers found</div>
+      {/if}
+    </div>
+
+    {#if showHardware}
+      <OverlayTrack
+        {showHardware}
+        {showNeuro}
+        {showCompute}
+        {showMilestones}
+      />
     {/if}
   </div>
 
-  <!-- Ephemeral HUD Panel -->
+  <!-- Detail Drawer -->
   {#if selectedPaper}
-    <HudPanel
+    <DetailDrawer
       paper={selectedPaper}
-      {relatedPapers}
-      {ancestry}
-      onSelect={selectPaper}
       onClose={closeDetail}
+      onSelectPaper={selectPaper}
+      onShowExplainer={showExplainerForConcept}
     />
   {/if}
+
+  <!-- Glossary Overlay -->
+  {#if showGlossary}
+    <GlossaryOverlay
+      onClose={() => (showGlossary = false)}
+      onSelectPaper={handlePaperSelectFromGlossary}
+    />
+  {/if}
+
+  <!-- About Panel -->
+  <AboutPanel show={showAbout} onClose={() => (showAbout = false)} />
 
   <!-- First-run intro hint -->
   {#if !hasSeenIntro}
     <div class="intro-hint">
-      <p>Hover the dial to read the year · Click a tick mark for paper details</p>
-      <button onclick={() => { hasSeenIntro = true; localStorage.setItem("aiml-seen", "1"); }}>
+      <p>Scroll the exhibit · Click papers for details · Press G for glossary</p>
+      <button onclick={() => { hasSeenIntro = true; localStorage.setItem("atlas-seen", "1"); }}>
         Got it
       </button>
     </div>
   {/if}
 </div>
-
-<!-- About Panel -->
-<AboutPanel show={showAbout} onClose={() => (showAbout = false)} />
-
 
 <style>
   .timeline-app {
@@ -327,6 +353,7 @@
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    background: #0a0a0a;
   }
 
   /* Header */
@@ -335,73 +362,72 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 16px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    background: #141414;
+    border-bottom: 1px solid #2a2a2a;
     flex-shrink: 0;
   }
+
   .app-header h1 {
-    font-size: 18px;
+    font-family: system-ui, sans-serif;
+    font-size: 16px;
     font-weight: 800;
-    color: var(--accent);
+    color: #5e72e4;
     white-space: nowrap;
+    letter-spacing: -0.01em;
   }
+
   .header-controls {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
   }
+
   .search-input {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
+    background: #0a0a0a;
+    border: 1px solid #2a2a2a;
+    color: #e0e0e0;
     padding: 4px 10px;
-    border-radius: var(--radius-md);
+    border-radius: 3px;
     font-size: 12px;
-    font-family: var(--font-ui);
+    font-family: "SF Mono", "JetBrains Mono", monospace;
     width: 200px;
   }
+
   .search-input:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: #5e72e4;
   }
-  .header-controls button {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
+
+  .header-btn {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    color: #888;
     padding: 4px 10px;
-    border-radius: var(--radius-md);
+    border-radius: 3px;
     font-size: 11px;
     cursor: pointer;
-    font-family: var(--font-ui);
-    transition: all 0.15s;
+    font-family: system-ui, sans-serif;
+    transition: all 120ms;
   }
-  .header-controls button:hover {
-    border-color: var(--accent-dim);
-    color: var(--text);
+
+  .header-btn:hover {
+    border-color: #444;
+    color: #e0e0e0;
   }
-  .header-controls button.active {
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--accent);
+
+  .header-btn.active {
+    background: rgba(94, 114, 228, 0.15);
+    border-color: #5e72e4;
+    color: #5e72e4;
   }
-  .about-btn {
-    font-size: 14px;
-  }
+
+  .about-btn { font-size: 14px; }
+
   .digest-link {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    padding: 4px 10px;
-    border-radius: var(--radius-md);
-    font-size: 11px;
-    font-family: var(--font-ui);
     text-decoration: none;
-    transition: all 0.15s;
-  }
-  .digest-link:hover {
-    border-color: var(--accent-dim);
-    color: var(--text);
+    display: inline-flex;
+    align-items: center;
   }
 
   /* Category Bar */
@@ -410,52 +436,60 @@
     align-items: center;
     gap: 4px;
     padding: 4px 16px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
+    background: #111;
+    border-bottom: 1px solid #2a2a2a;
     flex-wrap: wrap;
     flex-shrink: 0;
   }
+
   .cat-action {
     background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
+    border: 1px solid #2a2a2a;
+    color: #888;
     padding: 2px 8px;
-    border-radius: var(--radius-sm);
+    border-radius: 2px;
     font-size: 10px;
     cursor: pointer;
-    font-family: var(--font-ui);
+    font-family: system-ui, sans-serif;
   }
+
   .cat-chip {
     background: transparent;
-    border: 1px solid var(--cat-color, var(--border));
-    color: var(--text-dim);
+    border: 1px solid #2a2a2a;
+    color: #666;
     padding: 2px 8px;
-    border-radius: var(--radius-sm);
+    border-radius: 2px;
     font-size: 10px;
     cursor: pointer;
-    font-family: var(--font-ui);
+    font-family: system-ui, sans-serif;
     opacity: 0.4;
-    transition: opacity 0.15s;
+    transition: opacity 100ms;
   }
+
   .cat-chip.active {
     opacity: 1;
-    color: var(--text);
-    background: color-mix(in srgb, var(--cat-color) 15%, transparent);
+    color: #e0e0e0;
+    border-color: var(--cat-color, #5e72e4);
+    background: color-mix(in oklab, var(--cat-color, #5e72e4) 12%, transparent);
   }
+
   .kbd-hint {
     font-size: 8px;
     opacity: 0.5;
     margin-left: 2px;
   }
 
-  /* Orrery Container — circular dial fills remaining space */
-  .orrery-container {
+  /* Exhibit area */
+  .exhibit-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .exhibit-main {
     flex: 1;
     position: relative;
     overflow: hidden;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
   }
 
   /* Empty results */
@@ -465,8 +499,8 @@
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 14px;
-    color: var(--text-dim);
-    font-family: var(--font-ui);
+    color: #666;
+    font-family: system-ui, sans-serif;
   }
 
   /* Intro hint */
@@ -475,9 +509,9 @@
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
     padding: 12px 16px;
     z-index: 150;
     display: flex;
@@ -485,21 +519,24 @@
     gap: 12px;
     animation: intro-slide-up 0.3s ease-out;
   }
+
   .intro-hint p {
     font-size: 12px;
-    color: var(--text);
-    font-family: var(--font-ui);
+    color: #e0e0e0;
+    font-family: system-ui, sans-serif;
   }
+
   .intro-hint button {
-    background: var(--accent);
-    color: var(--bg);
+    background: #5e72e4;
+    color: #0a0a0a;
     border: none;
     padding: 4px 12px;
-    border-radius: var(--radius-md);
+    border-radius: 3px;
     font-size: 11px;
     cursor: pointer;
-    font-family: var(--font-ui);
+    font-family: system-ui, sans-serif;
   }
+
   @keyframes intro-slide-up {
     from { transform: translate(-50%, 20px); opacity: 0; }
     to { transform: translate(-50%, 0); opacity: 1; }
@@ -509,7 +546,7 @@
   @media (max-width: 768px) {
     .app-header {
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
     .header-controls {
       width: 100%;
@@ -529,21 +566,24 @@
     .cat-chip {
       padding: 6px 12px;
     }
+    .header-btn {
+      padding: 6px 14px;
+    }
   }
 
   /* Accessibility */
   .cat-chip:focus-visible,
   .cat-action:focus-visible,
-  .header-controls button:focus-visible {
-    outline: 2px solid var(--accent);
+  .header-btn:focus-visible {
+    outline: 2px solid #5e72e4;
     outline-offset: 1px;
   }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }

@@ -1,6 +1,6 @@
-# AI/ML History — Interactive Timeline PWA
+# AI Atlas — Interactive AI/ML Exhibit
 
-An interactive, installable PWA that lets you walk through the history of AI/ML research on a visual timeline — exploring relationships between publications, tracking the cross-sections of hardware and software development, overlaying global compute capacity and Moore's Law, and surfacing the neuroinformatics connections between brain science and machine intelligence.
+An interactive scrolling exhibit of AI/ML research — ~700 landmark papers across 23 categories, 198 concept explainers with full technical breakdowns, 66 milestones, and parallel tracks for neuroscience events and hardware evolution. The density acceleration from 1 paper/year (1900s) to 100+/year (2020s) is rendered visceral through variable row heights. All data is client-side, offline-first.
 
 ## What's Here
 

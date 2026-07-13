@@ -1,4 +1,4 @@
-// Core types for the AI/ML History timeline PWA
+// Core types for the AI Atlas interactive exhibit PWA
 
 export type PaperCategory =
   | "foundations"
@@ -20,7 +20,12 @@ export type PaperCategory =
   | "agents"
   | "robotics"
   | "ai-safety"
-  | "interpretability";
+  | "interpretability"
+  // NEW categories:
+  | "spatial-audio"     // 3D audio, HRTF, Ambisonics, binaural, neural spatial audio
+  | "speech-processing" // ASR, TTS, vocoders, speech synthesis
+  | "graph-learning"    // GNNs, GraphSAGE, GAT, message passing
+  ;
 
 export interface Paper {
   id: string;
@@ -35,6 +40,38 @@ export interface Paper {
   related?: string[];
   // Key concepts/techniques introduced
   concepts?: string[];
+  // Links to concept explainer IDs for terms introduced/used
+  explainerIds?: string[];
+  // DOI or canonical URL for the paper (optional)
+  doi?: string | null;
+}
+
+export interface Explainer {
+  id: string;                  // slug, e.g. "backpropagation"
+  term: string;                // display name, e.g. "Backpropagation"
+  category: PaperCategory | "general";
+  aka?: string[];              // alternative names: ["back-propagation", "BP"]
+  summary: string;             // 1-2 sentence TL;DR
+  explanation: string;         // multi-paragraph markdown — rigorous, exhaustive
+  howItWorks?: string;          // technical mechanism — markdown, may include formulas
+  whyItMatters?: string;        // significance and impact — markdown
+  history?: string;             // discovery/development narrative — markdown
+  relatedConcepts: string[];   // ids of related explainers
+  relatedPapers: string[];      // paper ids that introduce or use this concept
+  discoverers?: string;         // who introduced it
+  yearDiscovered?: number;
+  tags?: string[];              // cross-cutting tags: ["optimization", "training"]
+}
+
+export interface Milestone {
+  id: string;
+  year: number;
+  title: string;
+  description: string;
+  type: "event" | "product" | "dataset" | "benchmark" | "organization" | "competition";
+  category: PaperCategory | "general";
+  impact: string;
+  relatedPapers?: string[];
 }
 
 export type HardwareCategory =
@@ -94,9 +131,10 @@ export interface TimelineFilter {
   showNeuro: boolean;
   showCompute: boolean;
   showMoore: boolean;
+  showMilestones: boolean;
+  showEras: boolean;
   yearRange: [number, number];
 }
-
 
 export interface Era {
   yearStart: number;

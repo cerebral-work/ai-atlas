@@ -17,7 +17,7 @@ import { CustomDomain, Website } from "alchemy/cloudflare";
  *   type Env = typeof website.Env;
  */
 
-const app = await alchemy("aiml-history");
+const app = await alchemy("ai-atlas");
 
 // --- Optional resources (uncomment for Tier 2/3) ---
 // Tier 1 static SPA — no R2/D1 needed. See the cf-pwa-template for the

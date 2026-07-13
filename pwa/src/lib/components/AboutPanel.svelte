@@ -9,38 +9,41 @@
 </script>
 
 {#if show}
-  <div class="about-overlay" role="dialog" aria-label="About" onclick={onClose}>
-    <div class="about-panel" onclick={(e) => e.stopPropagation()}>
+  <div class="about-overlay" role="dialog" aria-modal="true" aria-label="About AI Atlas" tabindex="-1"
+    onclick={onClose} onkeydown={(e) => e.key === "Escape" && onClose()}>
+    <div class="about-panel">
       <button class="close-btn" onclick={onClose}>✕</button>
-      <h2>AI/ML History</h2>
+      <h2>AI Atlas</h2>
       <p class="about-intro">
-        An interactive timeline of AI/ML research, hardware, and neuroscience —
-        140 papers, 56 devices, 88 milestones, 10 eras. All data is client-side,
-        offline, hand-curated.
+        An interactive scrolling exhibit of AI/ML research — ~700 papers, 198 concept explainers,
+        66 milestones, 23 categories, spanning 1901 to 2025. All data is client-side, offline,
+        hand-curated.
       </p>
       <h3>How to Read It</h3>
       <ul class="about-howto">
-        <li>Toggle overlay bands (Moore's Law, Global Compute, Hardware, Neuroscience)</li>
-        <li>Filter categories with the chips below the header</li>
-        <li>Click papers for detail, lineage, and cross-references</li>
-        <li>Use keyboard: arrows to navigate, / to search, 1-9 for categories</li>
+        <li>Scroll the timeline — density accelerates from 1 paper/year (1900s) to 100+/year (2020s)</li>
+        <li>Toggle overlay tracks: NEU (neuroscience), MIL (milestones), HW (hardware)</li>
+        <li>Filter by category using the chips below the header (1-9 keyboard shortcuts)</li>
+        <li>Click any paper for detail drawer — summary, concepts, lineage, related work</li>
+        <li>Open the Glossary (G) for 198 concept explainers with full technical breakdowns</li>
+        <li>Search (/) filters papers by title, author, venue, or concept</li>
       </ul>
-      <h3>Insights</h3>
-      <ol class="about-insights">
-        <li><strong>The 23× acceleration</strong> — 33 papers span 1936-2009 (74 years). 107 papers span 2010-2026 (16 years). The field publishes 23× more papers per year in the modern era.</li>
-        <li><strong>Transformer is the most connected paper</strong> — "Attention Is All You Need" (2017) has 4 outgoing references and is referenced by BERT, GPT-2, ViT, and dozens more. It is the single most influential architecture in the dataset.</li>
-        <li><strong>Two AI winters are visible</strong> — 1969-1979 and 1987-1993 show near-zero paper density. The winters were caused by funding and infrastructure, not science — backpropagation was published in 1974 (Werbos) and 1986 (Rumelhart) during the winter.</li>
-        <li><strong>Hardware enabled the revolution</strong> — AlexNet (2012) required NVIDIA Kepler GTX 680 GPUs. Without CUDA (2006) and GPU compute, deep learning might have stayed theoretical.</li>
-        <li><strong>Neuroscience flows both ways</strong> — Early entries (1904-1958) flow neuroscience → AI. From 2014 onward, the flow reverses — AI models become tools for understanding the brain.</li>
-      </ol>
-      <h3>Data Methodology</h3>
+      <h3>What's Here</h3>
+      <dl class="about-stats">
+        <dt>Papers</dt><dd>~700 landmark publications across 23 categories</dd>
+        <dt>Explainers</dt><dd>198 deep concept breakdowns — what, how, why, history</dd>
+        <dt>Milestones</dt><dd>66 non-paper breakthroughs — datasets, products, organizations, events</dd>
+        <dt>Overlay tracks</dt><dd>Neuroscience events, hardware devices, compute milestones</dd>
+      </dl>
+      <h3>Design Note</h3>
       <p class="about-method">
-        Papers are hand-curated landmarks, not exhaustive. Bibliographies for 5
-        categories are in the papers/ directory. Hardware data from TOP500 and
-        vendor specs. Neuro data from historical sources.
+        The exhibit uses variable row heights — early papers get more space (76px each),
+        recent papers compress (28px each). This makes the field's acceleration visceral:
+        you scroll slowly through foundations, then the modern era blurs past. Density is the content.
       </p>
       <p class="about-credit">
-        Built by <a href="https://cerebral.work" target="_blank" rel="noopener">cerebral.work</a> — an embedded operating partner for solo technical founders.
+        Built by <a href="https://cerebral.work" target="_blank" rel="noopener">cerebral.work</a>.
+        Bibliographies in the papers/ directory. Data hand-curated, no automated scraping.
       </p>
     </div>
   </div>
@@ -104,13 +107,13 @@
     line-height: 1.6;
     color: var(--text);
   }
-  .about-howto, .about-insights {
+  .about-howto {
     font-size: 11px;
     line-height: 1.6;
     color: var(--text);
     padding-left: 20px;
   }
-  .about-howto li, .about-insights li {
+  .about-howto li {
     margin-bottom: 4px;
   }
   .about-credit {

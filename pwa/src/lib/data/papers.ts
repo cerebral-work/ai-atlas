@@ -1,4 +1,5 @@
 import type { Paper, PaperCategory } from "$lib/types";
+import { expandedPapers } from "./papers-expanded";
 
 export const categoryMeta: Record<
   PaperCategory,
@@ -24,6 +25,9 @@ export const categoryMeta: Record<
   robotics: { label: "Robotics", color: "#00b894", abbr: "RBT" },
   "ai-safety": { label: "AI Safety", color: "#d63031", abbr: "SAF" },
   interpretability: { label: "Interpretability", color: "#6c5ce7", abbr: "INT" },
+  "spatial-audio": { label: "Spatial Audio", color: "#e8a87c", abbr: "AUD" },
+  "speech-processing": { label: "Speech Processing", color: "#c44dac", abbr: "SPC" },
+  "graph-learning": { label: "Graph Learning", color: "#4dc4d4", abbr: "GRP" },
 };
 
 // Curated landmark papers — the backbone of the timeline.
@@ -222,19 +226,23 @@ export const papers: Paper[] = [
   { id: "wang2020lin", year: 2020, title: "Linformer: Self-Attention with Linear Complexity", authors: "Sinong Wang, Belinda Li, et al.", venue: "arXiv", arxivId: "2006.04768", category: "transformers", summary: "Low-rank projection of K/V to linear complexity.", concepts: ["linformer", "low-rank", "linear complexity"], related: ["vaswani2017", "choromanski2020"] },
 ];
 
+// Merge expanded papers (bibliography imports + new categories)
+// Then sort by year for the exhibit
+export const allPapers: Paper[] = [...papers, ...expandedPapers].sort((a, b) => a.year - b.year);
+
 // Helper: get all unique years
 export const yearRange: [number, number] = [
-  Math.min(...papers.map((p) => p.year)),
-  Math.max(...papers.map((p) => p.year)),
+  Math.min(...allPapers.map((p) => p.year)),
+  Math.max(...allPapers.map((p) => p.year)),
 ];
 
 // Helper: get all categories that have papers
 export const activeCategories: PaperCategory[] = [
-  ...new Set(papers.map((p) => p.category)),
+  ...new Set(allPapers.map((p) => p.category)),
 ] as PaperCategory[];
 
 // Helper: count papers per category
-export const categoryCounts: Record<string, number> = papers.reduce(
+export const categoryCounts: Record<string, number> = allPapers.reduce(
   (acc, p) => {
     acc[p.category] = (acc[p.category] || 0) + 1;
     return acc;
