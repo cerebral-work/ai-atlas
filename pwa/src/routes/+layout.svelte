@@ -1,10 +1,22 @@
 <script lang="ts">
   let { children } = $props();
 
-  // Register service worker
+  // Register service worker — force reload on update so users never see stale HTML
   $effect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              // New SW took over — reload to get fresh HTML
+              navigator.serviceWorker.controller.postMessage("SKIP_WAITING");
+              location.reload();
+            }
+          });
+        });
+      }).catch(() => {});
     }
   });
 </script>
