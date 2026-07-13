@@ -257,6 +257,7 @@
       <button onclick={() => (showEras = !showEras)} class:active={showEras}>
         Eras
       </button>
+      <a href="/digest/" class="digest-link">Digest</a>
       <button onclick={() => (showAbout = true)} class="about-btn" aria-label="About">?</button>
     </div>
   </header>
@@ -386,6 +387,21 @@
   }
   .about-btn {
     font-size: 14px;
+  }
+  .digest-link {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: var(--radius-md);
+    font-size: 11px;
+    font-family: var(--font-ui);
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .digest-link:hover {
+    border-color: var(--accent-dim);
+    color: var(--text);
   }
 
   /* Category Bar */
