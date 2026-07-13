@@ -63,6 +63,10 @@ Verify: `curl -s https://pub-36949a13725a448595ffed8fe035dba4.r2.dev/index.json`
 
 - Writes are scoped to the `aiml-digests` bucket + vault/engram/draft. **No git
   commits, no deploys, no other buckets.**
+- Exa API key comes from OpenBao (`sharedsecret/exa-api-credentials`, namespace
+  `deployment`, read via the scoped token at `~/.config/bao/automation-token`) —
+  1Password is the personal interactive fallback only; deployments never depend
+  on it being unlocked.
 - If wrangler auth is broken or a delivery leg fails, still complete the other
   legs and note the failure in the engram entry.
 - Never fabricate items — if the searches return nothing new, publish a digest
