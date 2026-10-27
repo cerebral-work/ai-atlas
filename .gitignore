@@ -16,3 +16,6 @@ Thumbs.db
 
 # claude local
 .claude/settings.local.json
+
+# local wrangler state/cache — never commit
+.wrangler/
